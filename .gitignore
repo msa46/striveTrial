@@ -19,3 +19,4 @@ striveTrial.code-workspace
 
 expo-env.d.ts
 # @end expo-cli
+.env
