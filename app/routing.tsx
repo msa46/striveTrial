@@ -1,10 +1,11 @@
 // import { GOOGLE_MAPS_API_KEY } from "@/env";
+import MapLibreGL from '@maplibre/maplibre-react-native';
 import 'react';
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import MapView, { Marker } from 'react-native-maps';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+MapLibreGL.setAccessToken(null);
 
 
 const routing = () => {
@@ -19,101 +20,29 @@ const routing = () => {
         longitudeDelta: 0.0421,  // Zoom level (horizontal)
     });
 
-    const handleSelectLocation = () => {
-      if (selectingSource) {
-        setSource(region);
-        setSelectingSource(false);
-      } else {
-        setDestination(region);
-      }
-    };
 
-    const handleMapPress = (e: any) => {
-        const { coordinate, position } = e.nativeEvent;
-        console.log('\n=== Map Touch Event ===');
-        console.log('Latitude:', coordinate.latitude);
-        console.log('Longitude:', coordinate.longitude);
-        console.log('Screen Position X:', position.x);
-        console.log('Screen Position Y:', position.y);
-      };
-    
-      // Handle long press events
-      const handleLongPress = (e) => {
-        const { coordinate, position } = e.nativeEvent;
-        console.log('\n=== Map Long Press Event ===');
-        console.log('Latitude:', coordinate.latitude);
-        console.log('Longitude:', coordinate.longitude);
-        console.log('Screen Position X:', position.x);
-        console.log('Screen Position Y:', position.y);
-      };
-    
-      // Handle drag events
-      const handleMapDrag = (e) => {
-        const { coordinate, position } = e.nativeEvent;
-        console.log('\n=== Map Drag Event ===');
-        console.log("API Key is:: ", process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
-
-        console.log('Latitude:', coordinate.latitude);
-        console.log('Longitude:', coordinate.longitude);
-        console.log('Screen Position X:', position.x);
-        console.log('Screen Position Y:', position.y);
-      };
-    
 
     return (
         <SafeAreaView style={styles.container}>
-           <View style={styles.searchContainer}>
-              <GooglePlacesAutocomplete
-                  placeholder="Search"
-                  onPress={(data: any, details: any ) => {
-                    const { lat, lng } = details.geometry.location;
-                    console.log("data & details ", data , details)
-                    setRegion({
-                      latitude: lat,
-                      longitude: lng,
-                      latitudeDelta: 0.0922,
-                      longitudeDelta: 0.0421,
-                    });
-                  }}
-                  query={{
-                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
-                    language: 'en',
-                  }}
-                  
-                  styles={{
-                    container: styles.autocompleteContainer,
-                    textInput: styles.searchInput,
-                    listView: styles.listView,
-                  }}
-                  fetchDetails={true}
-                  // styles={{
-                  //   container: styles.searchContainer,
-                  //   textInput: styles.searchInput,
-                  // }}
-                  />
-                </View>
-
-            <MapView style={{width:'100%', height:'100%', flexDirection:'column'}} 
-            // initialRegion={{
-            //     latitude: 50.8513,  // Maastricht latitude
-            //     longitude: 5.6909,  // Maastricht longitude
-            //     latitudeDelta: 0.0922,  // Zoom level (vertical)
-            //     longitudeDelta: 0.0421,  // Zoom level (horizontal)
-            //    }}
-              onRegionChangeComplete={setRegion}
-              region={region}
-              onPress={handleMapPress}
-              onLongPress={handleLongPress}
-              onPanDrag={handleMapDrag}>
-             {source && <Marker coordinate={source} pinColor="green" />}
-             {destination && <Marker coordinate={destination} pinColor="red" />}
-
-            </MapView>
-                <TouchableOpacity  onPress={handleSelectLocation}>
+          <View style={styles.container}>
+            <MapLibreGL.MapView
+              style={styles.map}
+              styleURL="https://demotiles.maplibre.org/style.json"
+            >
+              <MapLibreGL.Camera
+                defaultSettings={{
+                  centerCoordinate: [4.895168, 52.370216],
+                  zoomLevel: 10,
+                }}
+              />
+            </MapLibreGL.MapView>
+          </View>
+  
+                {/* <TouchableOpacity  onPress={handleSelectLocation}>
                     <Text >
                       {selectingSource ? 'Select Source' : 'Select Destination'}
                     </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
         </SafeAreaView>
     )
 }
@@ -125,47 +54,7 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  searchContainer: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    zIndex: 1,
-  },
-  autocompleteContainer: {
-    flex: 0,
-  },
-  searchInput: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    backgroundColor: 'white',
-    fontSize: 16,
-  },
-  listView: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderTopWidth: 0,
-    marginTop: -1,
-  },
-  button: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: '#007AFF',
-    paddingVertical: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
 });
+
 
 export default routing;
