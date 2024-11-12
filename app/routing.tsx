@@ -2,7 +2,6 @@
 import 'react';
 import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -63,34 +62,7 @@ const routing = () => {
     return (
         <SafeAreaView style={styles.container}>
            <View style={styles.searchContainer}>
-              <GooglePlacesAutocomplete
-                  placeholder="Search"
-                  onPress={(data: any, details: any ) => {
-                    const { lat, lng } = details.geometry.location;
-                    console.log("data & details ", data , details)
-                    setRegion({
-                      latitude: lat,
-                      longitude: lng,
-                      latitudeDelta: 0.0922,
-                      longitudeDelta: 0.0421,
-                    });
-                  }}
-                  query={{
-                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
-                    language: 'en',
-                  }}
-                  
-                  styles={{
-                    container: styles.autocompleteContainer,
-                    textInput: styles.searchInput,
-                    listView: styles.listView,
-                  }}
-                  fetchDetails={true}
-                  // styles={{
-                  //   container: styles.searchContainer,
-                  //   textInput: styles.searchInput,
-                  // }}
-                  />
+              
                 </View>
 
             <MapView style={{width:'100%', height:'100%', flexDirection:'column'}} 
