@@ -22,7 +22,7 @@ const HomeScreen = () => {
   useEffect(() => {
     if (!isNavigationReady) return;
 
-    router.replace('./planner');
+    router.replace('./../routing');
   }, [isNavigationReady, router]);
   if (!rootNavigationState?.key) {
     return <View><Text>Loading...</Text></View>;
