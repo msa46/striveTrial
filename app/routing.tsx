@@ -1,9 +1,13 @@
 // import { GOOGLE_MAPS_API_KEY } from "@/env";
+import RoundedButton from '@/components/RoundedButton';
+import RNDateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import 'react';
-import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+
 
 
 const routing = () => {
@@ -11,6 +15,11 @@ const routing = () => {
     const [source, setSource] = useState(null);
     const [destination, setDestination] = useState(null);
     const [selectingSource, setSelectingSource] = useState(true);
+    const [show, setShow] = useState(false);
+    const [date, setDate] = useState<Date>(new Date());
+
+    const mapRef = useRef<MapView | null>(null);
+
     const [region, setRegion] = useState({
         latitude: 50.8513,  // Maastricht latitude
         longitude: 5.6909,  // Maastricht longitude
@@ -24,6 +33,7 @@ const routing = () => {
         setSelectingSource(false);
       } else {
         setDestination(region);
+
       }
     };
 
@@ -58,14 +68,45 @@ const routing = () => {
         console.log('Screen Position Y:', position.y);
       };
     
+    const handleBackButton = () => {
+      console.log("In here ", selectingSource)
+      if(!selectingSource && source){
+        setSource(null);
+        setSelectingSource(true);
+        console.log("source is: ", source)
+        return true;
+      }
+      return false;
+    }
+    const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+      const currentDate = selectedDate || date;
+      setShow(Platform.OS === 'ios');
+      setDate(currentDate);
+    };
+    
+    useEffect(() => {
+        // Update the marker position when the region changes
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(region, 100);
+        }
+    }, [region]);
+
+    useEffect(() => {
+      BackHandler.addEventListener('hardwareBackPress', handleBackButton);
+
+      return () => {
+          BackHandler.removeEventListener('hardwareBackPress', handleBackButton);
+      };
+  }, [selectingSource]);
+
 
     return (
         <SafeAreaView style={styles.container}>
-           <View style={styles.searchContainer}>
+           {/* <View style={styles.searchContainer}>
               
-                </View>
+                </View> */}
 
-            <MapView style={{width:'100%', height:'100%', flexDirection:'column'}} 
+            <MapView style={styles.map}
             // initialRegion={{
             //     latitude: 50.8513,  // Maastricht latitude
             //     longitude: 5.6909,  // Maastricht longitude
@@ -78,14 +119,30 @@ const routing = () => {
               onLongPress={handleLongPress}
               onPanDrag={handleMapDrag}>
              {source && <Marker coordinate={source} pinColor="green" />}
-             {destination && <Marker coordinate={destination} pinColor="red" />}
-
+             {destination && <Marker coordinate={destination} pinColor="orange" />}
+             <Marker
+                coordinate={{
+                  latitude: region.latitude,
+                  longitude: region.longitude,
+                }}
+              />
             </MapView>
-                <TouchableOpacity  onPress={handleSelectLocation}>
+            <View style={styles.buttons}>
+                {/* <View  className='flex-1'> */}
+                <RoundedButton
+                  onPress={() => setShow(true)}
+                  className='w-16 h-16 bottom-16 rounded-full bg-green-500 shadow-md absolute flex-end p-10 '
+                  iconName='rocket'
+                /> 
+              {/* </View> */}
+              {show && <RNDateTimePicker value={new Date()} minimumDate={new Date()} onChange={onDateChange} />
+              }
+                <TouchableOpacity style={styles.button} onPress={handleSelectLocation}>
                     <Text >
                       {selectingSource ? 'Select Source' : 'Select Destination'}
                     </Text>
                 </TouchableOpacity>
+                </View>
         </SafeAreaView>
     )
 }
@@ -95,7 +152,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   map: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject ,
   },
   searchContainer: {
     position: 'absolute',
@@ -123,14 +180,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     marginTop: -1,
   },
-  button: {
+  buttons: {
     position: 'absolute',
+    // flexDirection: 'column',
     bottom: 20,
     left: 20,
     right: 20,
-    backgroundColor: '#007AFF',
-    paddingVertical: 15,
+  },
+  button: {
+    backgroundColor: '#f8fafc',
+    padding: 15,
     borderRadius: 5,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   buttonText: {
