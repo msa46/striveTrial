@@ -1,9 +1,10 @@
 // import { GOOGLE_MAPS_API_KEY } from "@/env";
 import RoundedButton from '@/components/RoundedButton';
 import RNDateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
 import 'react';
 import { useEffect, useRef, useState } from 'react';
-import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,7 +17,7 @@ const routing = () => {
     const [destination, setDestination] = useState(null);
     const [selectingSource, setSelectingSource] = useState(true);
     const [show, setShow] = useState(false);
-    const [date, setDate] = useState<Date>(new Date());
+    const [selectedDate, setDate] = useState<Date>(new Date());
 
     const mapRef = useRef<MapView | null>(null);
 
@@ -27,12 +28,17 @@ const routing = () => {
         longitudeDelta: 0.0421,  // Zoom level (horizontal)
     });
 
+    const router = useRouter();
+
+
     const handleSelectLocation = () => {
       if (selectingSource) {
         setSource(region);
         setSelectingSource(false);
       } else {
         setDestination(region);
+        router.push('/(tabs)/trips');
+        router.navigate('/(tabs)/trips');
 
       }
     };
@@ -69,20 +75,24 @@ const routing = () => {
       };
     
     const handleBackButton = () => {
-      console.log("In here ", selectingSource)
       if(!selectingSource && source){
         setSource(null);
         setSelectingSource(true);
-        console.log("source is: ", source)
         return true;
       }
       return false;
     }
     const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-      const currentDate = selectedDate || date;
-      setShow(Platform.OS === 'ios');
-      setDate(currentDate);
+      console.log("eventType, ", event.type)
+      console.log("IN calendar");
+      if (selectedDate && event.type === 'set') {
+        setDate(selectedDate);
+        console.log("Date is set: ", selectedDate)
+      } else {
+        setShow(false);  // This will hide the picker if "Cancel" is pressed
+      }
     };
+  
     
     useEffect(() => {
         // Update the marker position when the region changes
@@ -135,7 +145,7 @@ const routing = () => {
                   iconName='rocket'
                 /> 
               {/* </View> */}
-              {show && <RNDateTimePicker value={new Date()} minimumDate={new Date()} onChange={onDateChange} />
+              {show && <RNDateTimePicker value={selectedDate} mode="date"  onChange={onDateChange} />
               }
                 <TouchableOpacity style={styles.button} onPress={handleSelectLocation}>
                     <Text >

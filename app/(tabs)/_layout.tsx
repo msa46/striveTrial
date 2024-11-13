@@ -24,6 +24,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="trips"
+        options={{
+          title: 'Trips',
+          // href: '/trips',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'car' : 'car-outline'} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
