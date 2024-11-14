@@ -1,27 +1,28 @@
 // import { GOOGLE_MAPS_API_KEY } from "@/env";
 import RoundedButton from '@/components/RoundedButton';
+import { useTripsStore } from '@/store/trips';
+import { region } from '@/types/routing';
 import RNDateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import 'react';
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 
 
 
 const routing = () => {
 
-    const [source, setSource] = useState(null);
-    const [destination, setDestination] = useState(null);
+    const [source, setSource] = useState<region| null>(null);
+    const [destination, setDestination] = useState<region| null>(null);
     const [selectingSource, setSelectingSource] = useState(true);
     const [show, setShow] = useState(false);
     const [selectedDate, setDate] = useState<Date>(new Date());
 
     const mapRef = useRef<MapView | null>(null);
 
-    const [region, setRegion] = useState({
+    const [region, setRegion] = useState<region>({
         latitude: 50.8513,  // Maastricht latitude
         longitude: 5.6909,  // Maastricht longitude
         latitudeDelta: 0.0922,  // Zoom level (vertical)
@@ -30,13 +31,23 @@ const routing = () => {
 
     const router = useRouter();
 
-
+    const addTrip = useTripsStore((state) => state.addTrip)
     const handleSelectLocation = () => {
       if (selectingSource) {
         setSource(region);
         setSelectingSource(false);
       } else {
         setDestination(region);
+        if(source && destination){
+          addTrip({
+            source: source,
+            destination: destination,
+            date: selectedDate,
+            state: 'planned'
+            
+          })
+        }
+        
         router.push('/(tabs)/trips');
         router.navigate('/(tabs)/trips');
 
@@ -62,7 +73,7 @@ const routing = () => {
         console.log('Screen Position Y:', position.y);
       };
     
-      // Handle drag events
+      // Handle drag eventsadb logcat '*:E'
       const handleMapDrag = (e) => {
         const { coordinate, position } = e.nativeEvent;
         console.log('\n=== Map Drag Event ===');
@@ -117,6 +128,7 @@ const routing = () => {
                 </View> */}
 
             <MapView style={styles.map}
+            provider={PROVIDER_GOOGLE}
             // initialRegion={{
             //     latitude: 50.8513,  // Maastricht latitude
             //     longitude: 5.6909,  // Maastricht longitude
@@ -141,8 +153,8 @@ const routing = () => {
                 {/* <View  className='flex-1'> */}
                 <RoundedButton
                   onPress={() => setShow(true)}
-                  className='w-16 h-16 bottom-16 rounded-full bg-green-500 shadow-md absolute flex-end p-10 '
-                  iconName='rocket'
+                  className='w-16 h-16 bottom-16 rounded-full text-black bg-sky-500 shadow-md absolute flex-end  '
+                  iconName='calendar'
                 /> 
               {/* </View> */}
               {show && <RNDateTimePicker value={selectedDate} mode="date"  onChange={onDateChange} />

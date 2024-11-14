@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import React from 'react';
-import { Text, TextStyle, TouchableOpacity, TouchableOpacityProps, ViewStyle } from 'react-native';
+import { Pressable, Text, TextStyle, TouchableOpacityProps, ViewStyle } from 'react-native';
 
 
 type FontAwesomeIconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -25,21 +25,22 @@ const RoundedButton: React.FC<ButtonProps> = ({
   textClassName, 
   iconName,
   iconSize = 24,
-  iconColor = 'black', 
+  iconColor = 'white', 
   style, 
   textStyle, 
   ...props 
 }) => {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       className={`items-center justify-center  ${className}`}
       style={style}
       {...props}
     >
-        {iconName  &&  <Ionicons name={iconName || 'ios-add-circle'} size={iconSize} color={iconColor} /> }
+        {iconName  &&  <Ionicons  name={iconName || 'ios-add-circle'} size={iconSize} color={iconColor} /> }
+        {/* {iconName && <Text>Black</Text>} */}
       {title && <Text className={`font-bold ${textClassName}`} style={textStyle}>{title}</Text>}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
