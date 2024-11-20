@@ -37,7 +37,7 @@ const tripsData = [
         destination: "Rotterdam",
         fare: "$15.50",
         state: "planned",
-        rating: 5,
+        rating: null,
       },
   ]
 

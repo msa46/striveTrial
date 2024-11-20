@@ -43,6 +43,12 @@
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
           "isAndroidBackgroundLocationEnabled": "Allow $(PRODUCT_NAME) to use your location."
         }
+      ],
+      [
+        "expo-asset",
+        {
+          "assets": ["assets/Source.png", "assets/Destination.png", "assets/map.html"]
+        }
       ]
     ],
     "experiments": {

@@ -3,25 +3,66 @@ import RoundedButton from '@/components/RoundedButton';
 import { useTripsStore } from '@/store/trips';
 import { region } from '@/types/routing';
 import RNDateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
+import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
 import 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
+import { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview/lib/WebViewTypes';
+import { useMapInteractions } from '../hooks/useMapInteraction';
+import { Coordinates } from '../types/map';
+
+// interface Coordinates {
+//   source: [number, number] | null;
+//   destination: [number, number] | null;
+// }
+// const injectedJavaScript = `(function(data) {
+//   window.ReactNativeWebView.postMessage(JSON.stringify({key : "value"}));
+//     window.ReactNativeWebView.postMessage());
+// })();`;
+
+// const injectedJavaScript = `
+// (function() {
+//   window.postMessage = function(data) {
+//     window.ReactNativeWebView.postMessage(data);
+//   };
+// })();
+// `;
+
+interface MarkerMessage {
+  action: 'enableMarking' | 'disableMarking' | 'removeLastMarker';
+  mode?: 'source' | 'destination';
+  sourceMarker?: string;
+  destinationMarker?: string;
+}
 
 
+interface WebViewRef {
+  injectJavaScript: (script: string) => void;
+}
 
 const routing = () => {
-
-    const [source, setSource] = useState<region| null>(null);
-    const [destination, setDestination] = useState<region| null>(null);
+  const { webViewRef, injectMarker, removeLastMarker, getCurrentCenter, setMapCenter } = useMapInteractions();
+    const [source, setSource] = useState<Coordinates| null>(null);
+    const [destination, setDestination] = useState<Coordinates| null>(null);
     const [selectingSource, setSelectingSource] = useState(true);
     const [show, setShow] = useState(false);
     const [selectedDate, setDate] = useState<Date>(new Date());
+    const [isLoading, setIsLoading] = useState<boolean>(true);
 
     const mapRef = useRef<MapView | null>(null);
-
+    const [htmlFile, setHtmlFile] = useState('');
+    // const webViewRef = useRef<WebViewRef| null>(null);
+    const [sourceMarker, setSourceMarker] = useState<string>("");
+    const [destinationMarker, setDestinationMarker] = useState<string>("");
+    const [coordinates, setCoordinates] = useState({
+      source: null,
+      destination: null
+    });
     const [region, setRegion] = useState<region>({
         latitude: 50.8513,  // Maastricht latitude
         longitude: 5.6909,  // Maastricht longitude
@@ -32,11 +73,18 @@ const routing = () => {
     const router = useRouter();
 
     const addTrip = useTripsStore((state) => state.addTrip)
-    const handleSelectLocation = () => {
+
+    const handleSelectLocation = async () => {
       if (selectingSource) {
-        setSource(region);
+        enableMarking('source');
+        const coordinates = await injectMarker('source');
+        console.log("Got here");
+        setSource(getCurrentCenter);
         setSelectingSource(false);
       } else {
+        enableMarking('destination');
+        const coordinates = await injectMarker('destination');
+
         setDestination(region);
         if(source && destination){
           addTrip({
@@ -48,43 +96,44 @@ const routing = () => {
           })
         }
         
+        
         router.push('/(tabs)/trips');
         router.navigate('/(tabs)/trips');
 
       }
     };
+    const handleMessage = (event: WebViewMessageEvent): void => {
+      console.log("Handling messages");
+      try {
+        const data = JSON.parse(event.nativeEvent.data);
+        console.log('Received data from WebView:', data);
+        // setCoordinates(data);
+      } catch (error) {
+        console.error('Error parsing WebView message:', error);
+      }
+    };
 
-    const handleMapPress = (e: any) => {
-        const { coordinate, position } = e.nativeEvent;
-        console.log('\n=== Map Touch Event ===');
-        console.log('Latitude:', coordinate.latitude);
-        console.log('Longitude:', coordinate.longitude);
-        console.log('Screen Position X:', position.x);
-        console.log('Screen Position Y:', position.y);
-      };
-    
-      // Handle long press events
-      const handleLongPress = (e) => {
-        const { coordinate, position } = e.nativeEvent;
-        console.log('\n=== Map Long Press Event ===');
-        console.log('Latitude:', coordinate.latitude);
-        console.log('Longitude:', coordinate.longitude);
-        console.log('Screen Position X:', position.x);
-        console.log('Screen Position Y:', position.y);
-      };
-    
-      // Handle drag eventsadb logcat '*:E'
-      const handleMapDrag = (e) => {
-        const { coordinate, position } = e.nativeEvent;
-        console.log('\n=== Map Drag Event ===');
-        console.log("API Key is:: ", process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
+    const messageListener = (event: any) => {
+      try {
+        const message = JSON.parse(event.nativeEvent.data);
+        if (message.type === 'getCurrentCenter') {
+          setCoordinates(message.coordinates);
+          resolve(message.coordinates);
+          // Remove the listener once we have the data
+          webViewRef.current?.removeEventListener('message', messageListener);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    };
+    // const injectMarker = (type, coordinates) => {
+    //   const { longitude, latitude } = coordinates;
+    //   const functionName = type === 'source' ? 'setSourceMarker' : 'setDestinationMarker';
+    //   webViewRef.current?.injectJavaScript(
+    //     `window.mapFunctions.${functionName}(${longitude}, ${latitude});true;`
+    //   );
+    // };
 
-        console.log('Latitude:', coordinate.latitude);
-        console.log('Longitude:', coordinate.longitude);
-        console.log('Screen Position X:', position.x);
-        console.log('Screen Position Y:', position.y);
-      };
-    
     const handleBackButton = () => {
       if(!selectingSource && source){
         setSource(null);
@@ -93,7 +142,7 @@ const routing = () => {
       }
       return false;
     }
-    const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const onDateChange = (event: DateTimePickerEvent,  selectedDate?: Date) => {
       console.log("eventType, ", event.type)
       console.log("IN calendar");
       if (selectedDate && event.type === 'set') {
@@ -104,51 +153,170 @@ const routing = () => {
       }
     };
   
-    
     useEffect(() => {
-        // Update the marker position when the region changes
-        if (mapRef.current) {
-          mapRef.current.animateToRegion(region, 100);
-        }
-    }, [region]);
-
-    useEffect(() => {
-      BackHandler.addEventListener('hardwareBackPress', handleBackButton);
-
-      return () => {
-          BackHandler.removeEventListener('hardwareBackPress', handleBackButton);
+      // Load the HTML file
+      const loadHtml = async () => {
+        const asset = Asset.fromModule(require('../assets/map.html'));
+        await asset.downloadAsync();
+        setHtmlFile(asset.uri);
       };
-  }, [selectingSource]);
+  
+      loadHtml();
+    }, []);
 
 
+  // Load marker images
+  useEffect(() => {
+    const loadMarkerImages = async (): Promise<void> => {
+      try {
+        const [sourceAsset, destAsset] = await Promise.all([
+          Asset.fromModule(require('../assets/Source.png')),
+          Asset.fromModule(require('../assets/Destination.png'))
+        ]);
+
+        await Promise.all([
+          sourceAsset.downloadAsync(),
+          destAsset.downloadAsync()
+        ]);
+
+        setSourceMarker(sourceAsset.uri);
+        setDestinationMarker(destAsset.uri);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading markers:', error);
+        setIsLoading(false);
+      }
+    };
+
+    loadMarkerImages();
+  }, []);
+
+
+  // Handle messages from WebView
+  // const handleMessage = (event: WebViewMessageEvent): void => {
+  //   try {
+  //     const data = JSON.parse(event.nativeEvent.data) as Coordinates;
+  //     setCoordinates(data);
+  //   } catch (error) {
+  //     console.error('Error parsing WebView message:', error);
+  //   }
+  // };
+
+  const handleNavigationStateChange = (navState: WebViewNavigation): void => {
+      console.log('WebView navigation state:', navState);
+    };
+  // const enableMarking = (mode: String) => {
+  //   if(!webViewRef.current){
+  //     return;
+  //   }
+  //   console.log("IN THIS ONE ", sourceMarker)
+  //     webViewRef.current?.injectJavaScript(`
+  //       window.handleMessage(JSON.stringify({
+  //         action: 'enableMarking',
+  //         mode: '${mode}',
+  //         sourceMarker: '${sourceMarker}',
+  //         destinationMarker: '${destinationMarker}'
+  //       }));
+  //       true;
+  //     `);
+
+  //   }
+    
+  const enableMarking = (mode: 'source' | 'destination'): void => {
+    if (!webViewRef.current) return;
+
+    const message: MarkerMessage = {
+      action: 'enableMarking',
+      mode,
+      sourceMarker,
+      destinationMarker
+    };
+
+    const script = `
+      window.handleMessage(${JSON.stringify(message)});
+      true;
+    `;
+
+    webViewRef.current.injectJavaScript(script);
+  };
+
+    
+  // Remove last placed marker
+  // const removeLastMarker = (): boolean => {
+  //   if (!webViewRef.current) return false;
+
+    // const message: MarkerMessage = {
+    //   action: 'removeLastMarker'
+    // };
+
+    // const script = `
+    //   window.handleMessage(${JSON.stringify(message)});
+    //   true;
+    // `;
+
+  //   webViewRef.current.injectJavaScript(`window.mapFunctions.removeLastMarker();true;`);
+
+  //   return true;
+  // };
+
+  //   useEffect(() => {
+  //     BackHandler.addEventListener('hardwareBackPress', handleBackButton);
+
+  //     return () => {
+  //         BackHandler.removeEventListener('hardwareBackPress', handleBackButton);
+  //     };
+  // }, [selectingSource]);
+    
+      // Handle back button
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        removeLastMarker
+      );
+      return () => subscription.remove();
+    }, [])
+  );
     return (
         <SafeAreaView style={styles.container}>
            {/* <View style={styles.searchContainer}>
               
                 </View> */}
 
-            <MapView style={styles.map}
-            provider={PROVIDER_GOOGLE}
-            // initialRegion={{
-            //     latitude: 50.8513,  // Maastricht latitude
-            //     longitude: 5.6909,  // Maastricht longitude
-            //     latitudeDelta: 0.0922,  // Zoom level (vertical)
-            //     longitudeDelta: 0.0421,  // Zoom level (horizontal)
-            //    }}
-              onRegionChangeComplete={setRegion}
-              region={region}
-              onPress={handleMapPress}
-              onLongPress={handleLongPress}
-              onPanDrag={handleMapDrag}>
-             {source && <Marker coordinate={source} pinColor="green" />}
-             {destination && <Marker coordinate={destination} pinColor="orange" />}
-             <Marker
-                coordinate={{
-                  latitude: region.latitude,
-                  longitude: region.longitude,
+            <WebView
+                ref={webViewRef}
+                source={{ uri: htmlFile }}
+                // injectedJavaScript={INJECTED_JAVASCRIPT}
+                // onMessage={handleMessage}
+                onMessage={(event) => {
+                  const data = JSON.parse(event.nativeEvent.data);
+                  console.log('Received message from web:', data);
+                  // Handle the received data here
+                }}
+              
+                onNavigationStateChange={handleNavigationStateChange}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                // injectedJavaScript={injectedJavaScript}
+                originWhitelist={['*']}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.warn('WebView error:', nativeEvent);
+                }}
+                onLoadStart={() => {
+                  webViewRef.current?.injectJavaScript(`
+                    console = {
+                      log: function(message) {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({
+                          type: 'console',
+                          message: message
+                        }));
+                      }
+                    };
+                  `);
                 }}
               />
-            </MapView>
+
             <View style={styles.buttons}>
                 {/* <View  className='flex-1'> */}
                 <RoundedButton
@@ -167,7 +335,10 @@ const routing = () => {
                 </View>
         </SafeAreaView>
     )
+
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
